@@ -1,0 +1,10 @@
+port: 8080
+metrics_port: 9090
+health_interval: 10s
+health_timeout: 5s
+retries: 3
+otel_endpoint: otel-collector:4317
+backends:
+  - http://backend-1:8081
+  - http://backend-2:8082
+  - http://backend-3:8083

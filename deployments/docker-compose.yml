@@ -1,0 +1,73 @@
+services:
+  nimbuslb:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile.lb
+    ports:
+      - "8080:8080"   # proxied traffic
+      - "9090:9090"   # Prometheus /metrics
+    environment:
+      OTEL_ENDPOINT: otel-collector:4317
+    volumes:
+      - ./config.docker.yaml:/etc/nimbuslb/config.yaml:ro
+    command: ["-config", "/etc/nimbuslb/config.yaml"]
+    depends_on:
+      - backend-1
+      - backend-2
+      - backend-3
+      - otel-collector
+
+  backend-1:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile.backend
+    command: ["-port", "8081", "-id", "backend-1"]
+
+  backend-2:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile.backend
+    command: ["-port", "8082", "-id", "backend-2"]
+
+  backend-3:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile.backend
+    command: ["-port", "8083", "-id", "backend-3"]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.114.0
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    ports:
+      - "16686:16686" # UI
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9091:9090"   # host 9091 -> container 9090 (LB already uses host 9090)
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus

@@ -1,0 +1,10 @@
+port: 8080               # listener for proxied traffic
+metrics_port: 9090       # Prometheus /metrics listener
+health_interval: 10s     # active health-check cadence
+health_timeout: 5s       # per-probe timeout
+retries: 3               # failover attempts per request
+otel_endpoint: ""               # OTLP gRPC endpoint, e.g. localhost:4317 (empty = tracing disabled)
+backends:
+  - http://localhost:8081
+  - http://localhost:8082
+  - http://localhost:8083
